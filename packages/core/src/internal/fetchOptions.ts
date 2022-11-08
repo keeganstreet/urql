@@ -1,5 +1,5 @@
 import { print } from 'graphql';
-import { getOperationName, stringifyVariables } from '../utils';
+import { getOperationName, keyDocument, stringifyVariables } from '../utils';
 import { AnyVariables, GraphQLRequest, Operation } from '../types';
 
 export interface FetchBody {
@@ -9,12 +9,21 @@ export interface FetchBody {
   extensions: undefined | Record<string, any>;
 }
 
+const printedDocs = new Map<number, string>();
+
 export function makeFetchBody<
   Data = any,
   Variables extends AnyVariables = AnyVariables
 >(request: Omit<GraphQLRequest<Data, Variables>, 'key'>): FetchBody {
+  const query = keyDocument(request.query);
+  let printedQuery = printedDocs.get(query.__key);
+  if (!printedQuery) {
+    printedQuery = print(request.query);
+    printedDocs.set(query.__key, printedQuery);
+  }
+
   return {
-    query: print(request.query),
+    query: printedQuery,
     operationName: getOperationName(request.query),
     variables: request.variables || undefined,
     extensions: undefined,
